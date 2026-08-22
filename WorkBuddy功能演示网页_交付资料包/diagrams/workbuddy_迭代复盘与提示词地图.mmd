@@ -1,0 +1,36 @@
+flowchart TD
+  A([初始需求：制作 WorkBuddy 初学者教学演示网页]) --> B[资料调研：飞书文档 + 官方信息 + 用户截图]
+  B --> C[界面还原：三栏桌面客户端 + 品牌绿 + macOS 风格]
+  C --> D[第一轮交互：功能点击说明 / 设置子页]
+  D --> E{用户反馈与迭代}
+  E --> E1[设置不应关闭：改为窗口内切换]
+  E --> E2[说明不能全屏遮挡：改为右侧抽屉]
+  E --> E3[需要真实体验：对话 / 桌面整理 / 工作空间模拟]
+  E --> E4[指南不能删减：补全飞书 13 章 + PDF 12 章和附录]
+  E --> E5[设置最需要教学：自动教学卡 + 项目问号浮层]
+  E --> E6[小问号不显示：fixed Tooltip + 动态定位]
+  E --> E7[模型页面要还原：提供商 / API Key / 高级配置]
+  E --> E8[增加彩蛋：探索进度 → 邀请码 fuya2066]
+  E1 --> F[稳定版本：v5.8]
+  E2 --> F
+  E3 --> F
+  E4 --> F
+  E5 --> F
+  E6 --> F
+  E7 --> F
+  E8 --> F
+  F --> G[可交付归档：原始输入 / 源码 / 文档 / 测试 / 结构地图]
+
+  P1[关键提示词 1：Logo 生图原始片段] -.-> G
+  P2[关键提示词 2：内容完整性要求] -.-> G
+  P3[关键提示词 3：交互优化要求] -.-> G
+  P4[关键提示词 4：资料包导出要求] -.-> G
+
+  classDef start fill:#00C48C,color:#ffffff,stroke:#008D65,stroke-width:2px;
+  classDef process fill:#EFFFF8,color:#123329,stroke:#00C48C;
+  classDef feedback fill:#FFF7E6,color:#5A3A00,stroke:#F59E0B;
+  classDef final fill:#111827,color:#ffffff,stroke:#00C48C,stroke-width:2px;
+  class A start;
+  class B,C,D,E1,E2,E3,E4,E5,E6,E7,E8 process;
+  class E feedback;
+  class F,G final;
