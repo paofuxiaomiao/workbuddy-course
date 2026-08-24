@@ -13,6 +13,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import GuideDemoSimulator from "@/components/GuideDemoSimulator";
 import {
   GUIDE_REPO_URL,
   getGuideSourceUrl,
@@ -80,6 +81,7 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
   const [query, setQuery] = useState("");
   const [completed, setCompleted] = useState<Set<number>>(readProgress);
   const [copied, setCopied] = useState<string | null>(null);
+  const [demoChapter, setDemoChapter] = useState<GuideChapter | null>(null);
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
   const activeChapter =
@@ -226,8 +228,8 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
         </label>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[220px_310px_minmax(0,1fr)] xl:grid-cols-[250px_360px_minmax(0,1fr)]">
-        <aside className="hidden min-h-0 flex-col border-r border-white/10 bg-[#111713] p-3 md:flex">
+      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[310px_minmax(0,1fr)]">
+        <aside className="hidden">
           <div className="space-y-2">
             {guideParts.map(part => {
               const isActive = !showAppendix && activePart === part.id;
@@ -321,7 +323,7 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
             </h2>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto border-b border-white/8 p-3 md:hidden">
+          <div className="flex gap-2 overflow-x-auto border-b border-white/8 p-3">
             {guideParts.map(part => (
               <button
                 type="button"
@@ -416,7 +418,7 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
           style={{ contentVisibility: "auto" }}
         >
           {!showAppendix ? (
-            <article className="mx-auto max-w-4xl px-5 py-7 md:px-8 md:py-10 xl:px-12">
+            <article className="mx-auto max-w-[1180px] px-5 py-7 md:px-8 md:py-9 xl:px-10">
               <div className="relative overflow-hidden rounded-[28px] bg-[#151B16] px-6 py-7 text-white md:px-9 md:py-9">
                 <div
                   className="absolute -right-16 -top-20 h-56 w-56 rounded-full opacity-20 blur-3xl"
@@ -443,12 +445,7 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
                   <div className="mt-7 flex flex-wrap gap-3">
                     <button
                       type="button"
-                      onClick={() =>
-                        onLaunch({
-                          action: activeChapter.action,
-                          prompt: activeChapter.prompt,
-                        })
-                      }
+                      onClick={() => setDemoChapter(activeChapter)}
                       className="flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold text-[#101510] transition hover:-translate-y-0.5"
                       style={{ background: activePartInfo.color }}
                     >
@@ -466,6 +463,62 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
                   </div>
                 </div>
               </div>
+
+              <section className="mt-7 overflow-hidden rounded-2xl border border-black/8 bg-white/70">
+                <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
+                  <div className="border-b border-black/[0.06] p-5 md:p-6 lg:border-b-0 lg:border-r">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="rounded-full px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#101510]"
+                        style={{ background: activePartInfo.color }}
+                      >
+                        本节真实案例
+                      </span>
+                      <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-black/30">
+                        not a generic demo
+                      </span>
+                    </div>
+                    <h2 className="mt-4 text-xl font-semibold tracking-tight md:text-2xl">
+                      {activeChapter.demo.title}
+                    </h2>
+                    <p className="mt-3 text-sm leading-6 text-black/55">
+                      {activeChapter.demo.brief}
+                    </p>
+                    <div className="mt-5 rounded-xl bg-[#171A17] p-4 text-white">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/35">
+                        真实任务输入
+                      </p>
+                      <p className="mt-2 text-xs leading-6 text-white/72">
+                        {activeChapter.demo.input}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-5 md:p-6">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-black/35">
+                      执行路径与交付
+                    </p>
+                    <div className="mt-4 space-y-2.5">
+                      {activeChapter.demo.steps.map((step, index) => (
+                        <div key={step} className="flex items-start gap-3 rounded-xl border border-black/[0.06] bg-white px-3.5 py-3">
+                          <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-[#171A17] font-mono text-[10px] text-white">
+                            {index + 1}
+                          </span>
+                          <p className="pt-0.5 text-xs leading-5 text-black/62">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      {activeChapter.demo.artifacts.map(artifact => (
+                        <div key={artifact} className="rounded-xl border border-black/[0.06] bg-[#F1F0E9] p-3">
+                          <p className="truncate text-[11px] font-semibold text-black/62">{artifact}</p>
+                          <p className="mt-1 font-mono text-[9px] uppercase tracking-wider text-black/28">案例交付物</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
 
               <div className="grid gap-5 py-7 lg:grid-cols-[minmax(0,1fr)_240px]">
                 <section className="rounded-2xl border border-black/8 bg-white/65 p-5 md:p-6">
@@ -582,7 +635,7 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
               </div>
             </article>
           ) : (
-            <div className="mx-auto max-w-5xl px-5 py-7 md:px-8 md:py-10 xl:px-12">
+            <div className="mx-auto max-w-[1180px] px-5 py-7 md:px-8 md:py-10 xl:px-10">
               <div className="rounded-[28px] bg-[#9AE66E] p-7 md:p-9">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#31551F]">
                   Appendix A + B
@@ -717,6 +770,24 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
           )}
         </main>
       </div>
+
+      {demoChapter ? (
+        <GuideDemoSimulator
+          chapter={demoChapter}
+          color={
+            guideParts.find(part => part.id === demoChapter.part)?.color ??
+            "#9AE66E"
+          }
+          onClose={() => setDemoChapter(null)}
+          onOpenFeature={() => {
+            setDemoChapter(null);
+            onLaunch({
+              action: demoChapter.action,
+              prompt: demoChapter.prompt,
+            });
+          }}
+        />
+      ) : null}
     </div>
   );
 }
