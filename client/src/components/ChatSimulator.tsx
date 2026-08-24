@@ -2,7 +2,7 @@
 // 高保真还原真实对话界面：流式输出、Markdown渲染、预设问题、多Agent标签
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Mic, Plus, Sparkles, ChevronDown, RotateCcw, Copy, ThumbsUp, ThumbsDown, BookOpen } from 'lucide-react';
+import { X, Send, Mic, Plus, Sparkles, RotateCcw, Copy, ThumbsUp, ThumbsDown, BookOpen, FileText, Braces, ArrowUpRight } from 'lucide-react';
 
 // 名词词典（对话中使用）
 const CHAT_GLOSSARY: Record<string, string> = {
@@ -33,9 +33,70 @@ interface Message {
   status?: 'streaming' | 'done';
   subAgent?: string;
   terms?: string[];
+  attachments?: ChatFile[];
+  artifacts?: ChatFile[];
+  completionMeta?: string;
 }
 
-const PRESET_QA: Array<{ q: string; a: string; agentName?: string; agentColor?: string; agentAvatar?: string; subAgent?: string }> = [
+interface ChatFile {
+  name: string;
+  type: 'docx' | 'json' | 'markdown';
+  meta: string;
+}
+
+interface PresetQA {
+  q: string;
+  a: string;
+  agentName?: string;
+  agentColor?: string;
+  agentAvatar?: string;
+  subAgent?: string;
+  userAttachments?: ChatFile[];
+  artifacts?: ChatFile[];
+  completionMeta?: string;
+}
+
+const PRESET_QA: PresetQA[] = [
+  {
+    q: '抓取三测绘院招标相关信息，并整理成投标依据',
+    agentName: 'WorkBuddy',
+    agentColor: '#1F2937',
+    agentAvatar: '🤖',
+    completionMeta: '已完成 · 9m25s',
+    userAttachments: [
+      { name: '湖南省第三测绘院2026-2029年度项目合作供应商选取比选文件（终稿）.docx', type: 'docx', meta: '参考文件' },
+      { name: '湖南省第三测绘院2026-2029年度信息化包项目实施方案_最终完成稿.docx', type: 'docx', meta: '方案底稿' },
+    ],
+    artifacts: [
+      { name: '成果与单位信息.json', type: 'json', meta: '36.1 KB' },
+      { name: '中标成交公告.json', type: 'json', meta: '8 KB' },
+      { name: '三院公开信息抓取整理.md', type: 'markdown', meta: '43.9 KB' },
+    ],
+    a: `抓取完成，已打包整理输出。以下内容只保留公开网页中的可核验信息，没有把旧稿、错误供应商资料或未经验证的研究结论带入新方案。
+
+## 抓到了什么
+
+| 栏目 | 位置 | 数量 | 对投标的价值 |
+| 重要成果 | /zdym/cgzs/ | 15 项全文 | “需求理解”章节的硬依据 |
+| 单位概况 | /dwgk/ | 简介、资质、领导分工 | 还原真实业务、架构与部门 |
+| 采购招标公告 | /zwgk/zfcg/cgzb/ | 57 条 | 判断近年信息化采购方向 |
+| 中标成交公告 | /zwgk/zfcg/zbxx/ | 51 条 | 提取竞品与价格线索 |
+
+## 重要成果（15 项，已按相关度分组）
+
+- **平台与数据类**：湖南自然资源智慧平台、自然资源与地理空间数据库、“天地图·湖南”、地理信息数据管理与分发、产业园区数字地图系统。
+- **安全类**：网络安全技术支撑、地理信息安全与应用工程，以及 7 款自研安全产品和“湘印”系统。
+- **应用移动类**：天巡 APP、乡村振兴用地宝、特色地图。
+- **测绘工程服务类**：重大项目用地组卷、批后监管、政务服务窗口、援疆与岳阳航摄等。
+
+## 三个必须提醒你的坑
+
+1. **成交供应商和金额是图片**——成交结果正文只有项目基本情况，供应商名称与金额仍需 OCR 后才能做可靠的竞品分析。
+2. **上一轮同类项目值得重点参考**——2019—2020 年度测绘项目合作供方定点入围项目，与本轮 2026—2029 年合作供方选取直接相关。
+3. **组织机构页也是图片**——14 个业务部门来自领导班子分工的交叉还原，已在报告中标记为“待复核”。
+
+> 建议下一步：把这份公开信息索引映射到实施方案的“需求理解、总体架构、实施保障、类似业绩”四个章节，再逐条补充可追溯引用。`,
+  },
   {
     q: '我使用了你这么久了，把我当老板你有什么想对我说的？',
     agentName: 'WorkBuddy',
@@ -131,7 +192,7 @@ export default function ChatSimulator({ onClose, onPresetUsed }: ChatSimulatorPr
   const [inputText, setInputText] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [currentStreamText, setCurrentStreamText] = useState('');
-  const [currentQA, setCurrentQA] = useState<typeof PRESET_QA[0] | null>(null);
+  const [currentQA, setCurrentQA] = useState<PresetQA | null>(null);
   const [streamDone, setStreamDone] = useState(false);
   const [activeTerm, setActiveTerm] = useState<{ term: string; rect: DOMRect } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -144,7 +205,7 @@ export default function ChatSimulator({ onClose, onPresetUsed }: ChatSimulatorPr
     }, 50);
   };
 
-  const startStream = (qa: typeof PRESET_QA[0]) => {
+  const startStream = (qa: PresetQA) => {
     if (streaming) return;
     setCurrentQA(qa);
     setStreaming(true);
@@ -171,6 +232,8 @@ export default function ChatSimulator({ onClose, onPresetUsed }: ChatSimulatorPr
           subAgent: qa.subAgent,
           status: 'done',
           terms: detectTerms(text),
+          artifacts: qa.artifacts,
+          completionMeta: qa.completionMeta,
         }]);
         setCurrentStreamText('');
         setCurrentQA(null);
@@ -184,18 +247,23 @@ export default function ChatSimulator({ onClose, onPresetUsed }: ChatSimulatorPr
 
   const sendMessage = (text: string) => {
     if (!text.trim() || streaming) return;
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
+    const matched = PRESET_QA.find(qa => qa.q === text) || PRESET_QA[0];
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+      attachments: matched.q === text ? matched.userAttachments : undefined,
+    };
     onPresetUsed?.();
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     scrollToBottom();
 
     // 找匹配的预设问题
-    const matched = PRESET_QA.find(qa => qa.q === text) || PRESET_QA[0];
     setTimeout(() => startStream(matched), 600);
   };
 
-  const handlePreset = (qa: typeof PRESET_QA[0]) => {
+  const handlePreset = (qa: PresetQA) => {
     sendMessage(qa.q);
   };
 
@@ -262,8 +330,23 @@ export default function ChatSimulator({ onClose, onPresetUsed }: ChatSimulatorPr
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'user' ? (
-                <div className="max-w-[65%] bg-gray-800 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed">
-                  {msg.content}
+                <div className="max-w-[72%] bg-gray-800 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed shadow-sm">
+                  <p>{msg.content}</p>
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {msg.attachments.map(file => (
+                        <div key={file.name} className="flex items-center gap-2.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2">
+                          <div className="w-8 h-8 rounded-lg bg-blue-400/20 flex items-center justify-center flex-shrink-0">
+                            <FileText size={15} className="text-blue-200" />
+                          </div>
+                          <div className="min-w-0 text-left">
+                            <p className="text-xs font-medium text-white truncate">{file.name}</p>
+                            <p className="text-[11px] text-gray-300 mt-0.5">{file.meta}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="max-w-[85%] w-full">
@@ -276,13 +359,40 @@ export default function ChatSimulator({ onClose, onPresetUsed }: ChatSimulatorPr
                       {msg.agentAvatar || '🤖'}
                     </div>
                     <span className="text-sm font-semibold text-gray-800">{msg.agentName || 'WorkBuddy'}</span>
-                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">已完成 ›</span>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{msg.completionMeta || '已完成'} ›</span>
                   </div>
                   {/* 内容 */}
                   <div
                     className="text-sm text-gray-700 leading-relaxed pl-9"
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
                   />
+                  {msg.artifacts && msg.artifacts.length > 0 && (
+                    <div className="pl-9 mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-gray-700">交付物 · 三院公开信息抓取/</p>
+                        <span className="text-[11px] text-gray-400">共 {msg.artifacts.length} 项</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {msg.artifacts.map((file, index) => (
+                          <button
+                            key={file.name}
+                            type="button"
+                            className={`${index === msg.artifacts!.length - 1 && msg.artifacts!.length % 2 === 1 ? 'col-span-2' : ''} group flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-3 text-left hover:border-[#00C48C]/40 hover:bg-[#00C48C]/5 transition-all`}
+                            aria-label={`查看模拟交付物 ${file.name}`}
+                          >
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${file.type === 'markdown' ? 'bg-teal-100 text-teal-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {file.type === 'json' ? <Braces size={16} /> : <FileText size={16} />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{file.name}</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">{file.meta}</p>
+                            </div>
+                            <ArrowUpRight size={14} className="text-gray-400 group-hover:text-[#00C48C] transition-colors" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {/* 操作栏 */}
                   <div className="flex items-center gap-3 pl-9 mt-3">
                     <button className="text-gray-400 hover:text-gray-600 transition-colors"><Copy size={13} /></button>
