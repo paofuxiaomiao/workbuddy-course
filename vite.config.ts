@@ -15,7 +15,7 @@ const PROJECT_ROOT = import.meta.dirname;
 const LOG_DIR = path.join(PROJECT_ROOT, ".manus-logs");
 const MAX_LOG_SIZE_BYTES = 1 * 1024 * 1024; // 1MB per log file
 const TRIM_TARGET_BYTES = Math.floor(MAX_LOG_SIZE_BYTES * 0.6); // Trim to 60% to avoid constant re-trimming
-const GITHUB_PAGES_BASE = "/workbuddy-demo-7-5/";
+const GITHUB_PAGES_BASE = "/workbuddy-course/";
 
 type LogSource = "browserConsole" | "networkRequests" | "sessionReplay";
 
