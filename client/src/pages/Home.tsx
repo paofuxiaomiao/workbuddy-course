@@ -18,7 +18,7 @@ import AutomationPanel from '@/components/AutomationPanel';
 import ChatSimulator from '@/components/ChatSimulator';
 import DesktopTaskSimulator from '@/components/DesktopTaskSimulator';
 import WorkspaceModal from '@/components/WorkspaceModal';
-import GuidePage, { type GuideLaunch } from '@/components/GuidePage';
+import GuidePage from '@/components/GuidePage';
 import { features, type FeatureInfo } from '@/data/features';
 import EasterEgg from '@/components/EasterEgg';
 import ProgressBar from '@/components/ProgressBar';
@@ -89,35 +89,6 @@ export default function Home() {
     if (inputText.trim()) {
       setShowChat(true);
       track('chat_complete');
-    }
-  };
-
-  const handleGuideLaunch = ({ action, prompt }: GuideLaunch) => {
-    setShowGuide(false);
-    track('guide_chapter');
-    if (prompt) setInputText(prompt);
-
-    if (action === 'settings') setShowSettings(true);
-    else if (action === 'workspace') setShowWorkspace(true);
-    else if (action === 'desktop-task') setShowDesktopTask(true);
-    else if (action === 'automation') { setActiveNav('automation'); setMainView('automation'); }
-    else if (action === 'project') { setActiveNav('project'); setMainView('project'); }
-    else if (action === 'experts' || action === 'skills' || action === 'connectors') {
-      setActiveNav('expert');
-      setMainView('expert');
-      openFeature(action === 'experts' ? 'expert' : 'skills');
-    } else if (action === 'assistant') {
-      setActiveNav('assistant');
-      setMainView('home');
-      openFeature('assistant');
-    } else if (action === 'more') {
-      setActiveNav('more');
-      setMainView('home');
-      setShowMoreMenu(true);
-    } else {
-      setActiveNav('newTask');
-      setMainView('home');
-      if (!prompt) setShowChat(true);
     }
   };
 
@@ -462,7 +433,7 @@ export default function Home() {
                       <BookOpen size={16} className="text-[#00C48C]" />
                       <div className="text-left">
                         <p className="text-sm font-semibold">WorkBuddy 功能指南</p>
-                        <p className="text-xs text-gray-400">27章节 · 4条学习路径 · 指令模板 · 进度记录</p>
+                        <p className="text-xs text-gray-400">8章节 · 20+名词解释 · 提示词模板 · 操作检查清单</p>
                       </div>
                     </div>
                     <ChevronRight size={16} className="text-gray-400 group-hover:text-white transition-colors" />
@@ -530,12 +501,7 @@ export default function Home() {
           onSelect={(name) => { setSelectedWorkspace(name); track('workspace_select'); }}
         />
       )}
-      {showGuide && (
-        <GuidePage
-          onClose={() => { setShowGuide(false); track('guide_chapter'); }}
-          onLaunch={handleGuideLaunch}
-        />
-      )}
+      {showGuide && <GuidePage onClose={() => { setShowGuide(false); track('guide_chapter'); }} />}
 
       {/* 进度条 */}
       <ProgressBar
