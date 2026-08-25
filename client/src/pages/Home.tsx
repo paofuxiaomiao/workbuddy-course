@@ -19,7 +19,6 @@ import ChatSimulator from '@/components/ChatSimulator';
 import DesktopTaskSimulator from '@/components/DesktopTaskSimulator';
 import WorkspaceModal from '@/components/WorkspaceModal';
 import GuidePage, { type GuideLaunch } from '@/components/GuidePage';
-import AdvancedModePage from '@/components/AdvancedModePage';
 import { features, type FeatureInfo } from '@/data/features';
 import EasterEgg from '@/components/EasterEgg';
 import ProgressBar from '@/components/ProgressBar';
@@ -42,7 +41,6 @@ export default function Home() {
   const [showDesktopTask, setShowDesktopTask] = useState(false);
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const { completedCategories, isAllComplete, eggTriggered, track, dismissEgg, progress } = useProgress();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mainView, setMainView] = useState<MainView>('home');
@@ -454,7 +452,7 @@ export default function Home() {
               {/* ===== 三个模拟体验入口 ===== */}
               <div className="w-full max-w-2xl mt-5 grid grid-cols-3 gap-3">
                 {/* 功能指南入口 */}
-                <div className="col-span-3 mb-1 grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="col-span-3 mb-1">
                   <button
                   onClick={() => setShowGuide(true)}
                   className="w-full flex items-center justify-between px-4 py-3 bg-gray-950 text-white rounded-xl hover:bg-gray-800 transition-colors group"
@@ -468,19 +466,6 @@ export default function Home() {
                       </div>
                     </div>
                     <ChevronRight size={16} className="text-gray-400 group-hover:text-white transition-colors" />
-                  </button>
-                  <button
-                    onClick={() => setShowAdvanced(true)}
-                    className="flex items-center justify-between rounded-xl bg-[#9AE66E] px-4 py-3 text-[#101510] transition hover:bg-[#A9F07F] group"
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <Zap size={16} fill="currentColor" />
-                      <div>
-                        <p className="text-sm font-semibold">进入进阶模式</p>
-                        <p className="mt-0.5 text-[11px] text-[#31551F]">3 个官方实践实验</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={15} className="transition group-hover:translate-x-0.5" />
                   </button>
                 </div>
                 <button
@@ -549,14 +534,6 @@ export default function Home() {
         <GuidePage
           onClose={() => { setShowGuide(false); track('guide_chapter'); }}
           onLaunch={handleGuideLaunch}
-        />
-      )}
-      {showAdvanced && (
-        <AdvancedModePage
-          onClose={() => {
-            setShowAdvanced(false);
-            track('guide_chapter');
-          }}
         />
       )}
 
