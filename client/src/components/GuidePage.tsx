@@ -33,6 +33,8 @@ export interface GuideLaunch {
 }
 
 interface GuidePageProps {
+  onReading?: () => void;
+  onPractice?: (unit: "A" | "B" | "C" | "D") => void;
   onClose: () => void;
   onLaunch: (launch: GuideLaunch) => void;
 }
@@ -73,7 +75,12 @@ function ChapterNumber({
   );
 }
 
-export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
+export default function GuidePage({
+  onClose,
+  onLaunch,
+  onPractice,
+  onReading,
+}: GuidePageProps) {
   const [activePart, setActivePart] = useState<GuidePartId>("manual");
   const [activeNumber, setActiveNumber] = useState(1);
   const [showAppendix, setShowAppendix] = useState(false);
@@ -225,6 +232,47 @@ export default function GuidePage({ onClose, onLaunch }: GuidePageProps) {
           />
         </label>
       </div>
+
+      {onReading && (
+        <div className="border-b border-white/10 px-5 py-2">
+          <button
+            onClick={onReading}
+            className="flex items-center gap-2 text-xs text-white/70 hover:text-[#9AE66E]"
+          >
+            <BookOpen size={14} />
+            阅读素材：An Alien Mind · 中文注释高亮版
+            <ArrowUpRight size={13} />
+          </button>
+        </div>
+      )}
+      {onPractice && (
+        <nav
+          aria-label="课程实操"
+          className="flex flex-wrap gap-2 border-b border-white/10 px-5 py-3 bg-[#111713]"
+        >
+          <span className="self-center mr-2 text-xs text-white/50">
+            读完就试一试
+          </span>
+          {(
+            [
+              ["A", "腾讯会议"],
+              ["B", "小红书文案"],
+              ["C", "知识库到页面"],
+              ["D", "多人协作"],
+            ] as const
+          ).map(([unit, title]) => (
+            <button
+              key={unit}
+              onClick={() => onPractice(unit)}
+              className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:border-[#9AE66E]/50 hover:text-[#9AE66E]"
+            >
+              <span className="text-[#9AE66E]">{unit}</span>
+              {title}
+              <Play size={11} />
+            </button>
+          ))}
+        </nav>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[220px_310px_minmax(0,1fr)] xl:grid-cols-[250px_360px_minmax(0,1fr)]">
         <aside className="hidden min-h-0 flex-col border-r border-white/10 bg-[#111713] p-3 md:flex">

@@ -4,34 +4,68 @@
 //   - 功能介绍改为右侧侧边抽屉（不遮挡主界面）
 //   - 新增对话模拟、桌面整理模拟、工作空间选择模拟
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Plus, Search, Filter, Bell, Settings, ChevronDown, ChevronRight,
-  Mic, Send, Paperclip, Sparkles, Zap, Github, Shield, Folder,
-  Users, Bot, Layers, MoreHorizontal, MessageSquare, MonitorPlay, BookOpen
-} from 'lucide-react';
-import FeatureDrawer from '@/components/FeatureDrawer';
-import SettingsModal from '@/components/SettingsModal';
-import ExpertPanel from '@/components/ExpertPanel';
-import ProjectPanel from '@/components/ProjectPanel';
-import AutomationPanel from '@/components/AutomationPanel';
-import ChatSimulator from '@/components/ChatSimulator';
-import DesktopTaskSimulator from '@/components/DesktopTaskSimulator';
-import WorkspaceModal from '@/components/WorkspaceModal';
-import GuidePage, { type GuideLaunch } from '@/components/GuidePage';
-import { features, type FeatureInfo } from '@/data/features';
-import EasterEgg from '@/components/EasterEgg';
-import ProgressBar from '@/components/ProgressBar';
-import { useProgress } from '@/hooks/useProgress';
+  Plus,
+  Search,
+  Filter,
+  Bell,
+  Settings,
+  ChevronDown,
+  ChevronRight,
+  Mic,
+  Send,
+  Paperclip,
+  Sparkles,
+  Zap,
+  Github,
+  Shield,
+  Folder,
+  Users,
+  Bot,
+  Layers,
+  MoreHorizontal,
+  MessageSquare,
+  MonitorPlay,
+  BookOpen,
+} from "lucide-react";
+import FeatureDrawer from "@/components/FeatureDrawer";
+import SettingsModal from "@/components/SettingsModal";
+import ExpertPanel from "@/components/ExpertPanel";
+import ProjectPanel from "@/components/ProjectPanel";
+import AutomationPanel from "@/components/AutomationPanel";
+import ChatSimulator from "@/components/ChatSimulator";
+import DesktopTaskSimulator from "@/components/DesktopTaskSimulator";
+import WorkspaceModal from "@/components/WorkspaceModal";
+import GuidePage, { type GuideLaunch } from "@/components/GuidePage";
+import { features, type FeatureInfo } from "@/data/features";
+import EasterEgg from "@/components/EasterEgg";
+import ProgressBar from "@/components/ProgressBar";
+import { useProgress } from "@/hooks/useProgress";
 
-type MainView = 'home' | 'expert' | 'project' | 'automation';
+import ReadingPanel from "@/components/ReadingPanel";
+import Replica, { type Unit, type PracticeLaunch } from "@/practice/Replica";
+
+type MainView =
+  | "home"
+  | "expert"
+  | "project"
+  | "automation"
+  | "practice"
+  | "reading";
+const practices: { unit: Unit; title: string; detail: string }[] = [
+  { unit: "A", title: "腾讯会议", detail: "启用技能，预约并核对会议" },
+  { unit: "B", title: "小红书文案", detail: "召唤专家，补充材料与调优" },
+  { unit: "C", title: "知识库到页面", detail: "导入表格，阅读并生成页面" },
+  { unit: "D", title: "多人协作", detail: "邀请同伴，配置专家与云端任务" },
+];
 
 const taskList = [
-  { name: '制作WorkBuddy产品介绍视频', time: '2天前' },
-  { name: '继续之前的会话', time: '2天前' },
-  { name: '帮我把github里的一个项目...', time: '23天前' },
-  { name: '测试 Magazine Web PPT ...', time: '23天前' },
-  { name: '根据补充资料生成腾讯云演...', time: '23天前' },
+  { name: "制作WorkBuddy产品介绍视频", time: "2天前" },
+  { name: "继续之前的会话", time: "2天前" },
+  { name: "帮我把github里的一个项目...", time: "23天前" },
+  { name: "测试 Magazine Web PPT ...", time: "23天前" },
+  { name: "根据补充资料生成腾讯云演...", time: "23天前" },
 ];
 
 export default function Home() {
@@ -41,18 +75,61 @@ export default function Home() {
   const [showDesktopTask, setShowDesktopTask] = useState(false);
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const { completedCategories, isAllComplete, eggTriggered, track, dismissEgg, progress } = useProgress();
+  const {
+    completedCategories,
+    isAllComplete,
+    eggTriggered,
+    track,
+    dismissEgg,
+    progress,
+  } = useProgress();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [mainView, setMainView] = useState<MainView>('home');
-  const [activeNav, setActiveNav] = useState('newTask');
+  const [mainView, setMainView] = useState<MainView>("home");
+  const [activeNav, setActiveNav] = useState("newTask");
+  const [practiceLaunch, setPracticeLaunch] = useState<PracticeLaunch>();
+  const [practiceUnit, setPracticeUnit] = useState<Unit>("A");
+  const [practiceProgress, setPracticeProgress] = useState<
+    Record<Unit, number>
+  >({ A: 0, B: 0, C: 0, D: 0 });
+  const completedPractices = Object.values(practiceProgress).filter(
+    n => n === 4
+  ).length;
+  const openReading = () => {
+    setShowGuide(false);
+    setActiveFeature(null);
+    setActiveNav("reading");
+    setMainView("reading");
+  };
+  const launchPractice = (unit: Unit, prompt?: string) => {
+    setShowGuide(false);
+    setActiveFeature(null);
+    setPracticeUnit(unit);
+    setActiveNav(
+      unit === "C" ? "library" : unit === "D" ? "project" : "expert"
+    );
+    setMainView("practice");
+    setPracticeLaunch(previous => ({
+      unit,
+      prompt,
+      id: (previous?.id ?? 0) + 1,
+    }));
+  };
+  const handlePracticeUnit = useCallback((unit: Unit) => {
+    setPracticeUnit(unit);
+    setActiveNav(
+      unit === "C" ? "library" : unit === "D" ? "project" : "expert"
+    );
+  }, []);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCraftMenu, setShowCraftMenu] = useState(false);
   const [taskExpanded, setTaskExpanded] = useState(true);
   const [spaceExpanded, setSpaceExpanded] = useState(true);
-  const [inputText, setInputText] = useState('');
-  const [activeScene, setActiveScene] = useState('daily');
+  const [inputText, setInputText] = useState("");
+  const [activeScene, setActiveScene] = useState("daily");
   const [showWelcome, setShowWelcome] = useState(true);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(
+    null
+  );
   const userMenuRef = useRef<HTMLDivElement>(null);
   const craftMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -60,63 +137,93 @@ export default function Home() {
   const openFeature = (id: string) => {
     if (features[id]) {
       setActiveFeature(features[id]);
-      track('feature_click');
+      track("feature_click");
     }
   };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setShowUserMenu(false);
-      if (craftMenuRef.current && !craftMenuRef.current.contains(e.target as Node)) setShowCraftMenu(false);
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setShowMoreMenu(false);
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      )
+        setShowUserMenu(false);
+      if (
+        craftMenuRef.current &&
+        !craftMenuRef.current.contains(e.target as Node)
+      )
+        setShowCraftMenu(false);
+      if (
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(e.target as Node)
+      )
+        setShowMoreMenu(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleNavClick = (nav: string) => {
     setActiveNav(nav);
-    if (nav === 'newTask') { setMainView('home'); }
-    else if (nav === 'assistant') { setMainView('home'); openFeature('assistant'); }
-    else if (nav === 'project') { setMainView('project'); }
-    else if (nav === 'expert') { setMainView('expert'); }
-    else if (nav === 'automation') { setMainView('automation'); }
-    else if (nav === 'more') { setShowMoreMenu(!showMoreMenu); }
+    if (nav === "newTask") {
+      setMainView("home");
+    } else if (nav === "assistant") {
+      setMainView("home");
+      openFeature("assistant");
+    } else if (nav === "project") {
+      launchPractice("D");
+    } else if (nav === "expert") {
+      launchPractice("B");
+    } else if (nav === "library") {
+      launchPractice("C");
+    } else if (nav === "automation") {
+      setMainView("automation");
+    } else if (nav === "more") {
+      setShowMoreMenu(!showMoreMenu);
+    }
   };
 
   // 发送消息时打开对话模拟
   const handleSend = () => {
     if (inputText.trim()) {
       setShowChat(true);
-      track('chat_complete');
+      track("chat_complete");
     }
   };
 
   const handleGuideLaunch = ({ action, prompt }: GuideLaunch) => {
     setShowGuide(false);
-    track('guide_chapter');
+    track("guide_chapter");
     if (prompt) setInputText(prompt);
 
-    if (action === 'settings') setShowSettings(true);
-    else if (action === 'workspace') setShowWorkspace(true);
-    else if (action === 'desktop-task') setShowDesktopTask(true);
-    else if (action === 'automation') { setActiveNav('automation'); setMainView('automation'); }
-    else if (action === 'project') { setActiveNav('project'); setMainView('project'); }
-    else if (action === 'experts' || action === 'skills' || action === 'connectors') {
-      setActiveNav('expert');
-      setMainView('expert');
-      openFeature(action === 'experts' ? 'expert' : 'skills');
-    } else if (action === 'assistant') {
-      setActiveNav('assistant');
-      setMainView('home');
-      openFeature('assistant');
-    } else if (action === 'more') {
-      setActiveNav('more');
-      setMainView('home');
+    if (action === "settings") setShowSettings(true);
+    else if (action === "workspace") setShowWorkspace(true);
+    else if (action === "desktop-task") setShowDesktopTask(true);
+    else if (action === "automation") {
+      setActiveNav("automation");
+      setMainView("automation");
+    } else if (action === "project") {
+      launchPractice("D", prompt);
+    } else if (
+      action === "experts" ||
+      action === "skills" ||
+      action === "connectors"
+    ) {
+      if (action === "connectors") {
+        setActiveNav("expert");
+        setMainView("expert");
+      } else launchPractice(action === "skills" ? "A" : "B", prompt);
+    } else if (action === "assistant") {
+      setActiveNav("assistant");
+      setMainView("home");
+      openFeature("assistant");
+    } else if (action === "more") {
+      setActiveNav("more");
+      setMainView("home");
       setShowMoreMenu(true);
     } else {
-      setActiveNav('newTask');
-      setMainView('home');
+      setActiveNav("newTask");
+      setMainView("home");
       if (!prompt) setShowChat(true);
     }
   };
@@ -124,7 +231,7 @@ export default function Home() {
   return (
     <div className="flex h-screen overflow-hidden bg-white select-none">
       {/* ===== 左侧导航栏 ===== */}
-      <div className="wb-sidebar flex-shrink-0 relative">
+      <div className="wb-sidebar flex-shrink-0 relative overflow-y-auto flex flex-col [&>*]:shrink-0">
         {/* macOS 窗口控制 */}
         <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200/60">
           <div className="flex gap-1.5">
@@ -133,9 +240,15 @@ export default function Home() {
             <div className="w-3 h-3 rounded-full bg-green-400" />
           </div>
           <div className="flex items-center gap-1 text-gray-400">
-            <button className="hover:text-gray-600 p-1 rounded"><Layers size={13} /></button>
-            <button className="hover:text-gray-600 p-1 rounded"><Search size={13} /></button>
-            <button className="hover:text-gray-600 p-1 rounded"><Filter size={13} /></button>
+            <button className="hover:text-gray-600 p-1 rounded">
+              <Layers size={13} />
+            </button>
+            <button className="hover:text-gray-600 p-1 rounded">
+              <Search size={13} />
+            </button>
+            <button className="hover:text-gray-600 p-1 rounded">
+              <Filter size={13} />
+            </button>
           </div>
         </div>
 
@@ -145,35 +258,89 @@ export default function Home() {
 
         {/* 主导航 */}
         <nav className="px-2 space-y-0.5">
-          <NavItem icon={<Plus size={14} />} label="新建任务" active={activeNav === 'newTask'}
-            onClick={() => handleNavClick('newTask')} featureId="newTask" onFeatureClick={openFeature} />
-          <NavItem icon={<Bot size={14} />} label="助理" active={activeNav === 'assistant'}
-            onClick={() => handleNavClick('assistant')} featureId="assistant" onFeatureClick={openFeature} />
-          <NavItem icon={<Folder size={14} />} label="项目" active={activeNav === 'project'}
-            onClick={() => handleNavClick('project')} featureId="project" onFeatureClick={openFeature} />
-          <NavItem icon={<Users size={14} />} label="专家" active={activeNav === 'expert'}
-            onClick={() => handleNavClick('expert')} featureId="expert" onFeatureClick={openFeature}
-            rightText="技能·连接器" />
-          <NavItem icon={<Zap size={14} />} label="自动化" active={activeNav === 'automation'}
-            onClick={() => handleNavClick('automation')} featureId="automation" onFeatureClick={openFeature} />
+          <NavItem
+            icon={<Plus size={14} />}
+            label="新建任务"
+            active={activeNav === "newTask"}
+            onClick={() => handleNavClick("newTask")}
+            featureId="newTask"
+            onFeatureClick={openFeature}
+          />
+          <NavItem
+            icon={<Bot size={14} />}
+            label="助理"
+            active={activeNav === "assistant"}
+            onClick={() => handleNavClick("assistant")}
+            featureId="assistant"
+            onFeatureClick={openFeature}
+          />
+          <NavItem
+            icon={<Folder size={14} />}
+            label="项目"
+            active={activeNav === "project"}
+            onClick={() => handleNavClick("project")}
+            featureId="project"
+            onFeatureClick={openFeature}
+          />
+          <NavItem
+            icon={<Users size={14} />}
+            label="专家·技能·连接器"
+            active={activeNav === "expert"}
+            onClick={() => handleNavClick("expert")}
+            featureId="expert"
+            onFeatureClick={openFeature}
+          />
+          <NavItem
+            icon={<Zap size={14} />}
+            label="自动化"
+            active={activeNav === "automation"}
+            onClick={() => handleNavClick("automation")}
+            featureId="automation"
+            onFeatureClick={openFeature}
+          />
+          <NavItem
+            icon={<BookOpen size={14} />}
+            label="资料库"
+            active={activeNav === "library"}
+            onClick={() => handleNavClick("library")}
+            featureId="more"
+            onFeatureClick={openFeature}
+          />
           <div className="relative" ref={moreMenuRef}>
-            <NavItem icon={<MoreHorizontal size={14} />} label="更多" active={activeNav === 'more'}
-              onClick={() => { setActiveNav('more'); setShowMoreMenu(!showMoreMenu); }}
-              featureId="more" onFeatureClick={openFeature} rightText="资料库·灵感" />
+            <NavItem
+              icon={<MoreHorizontal size={14} />}
+              label="更多"
+              active={activeNav === "more"}
+              onClick={() => {
+                setActiveNav("more");
+                setShowMoreMenu(!showMoreMenu);
+              }}
+              featureId="more"
+              onFeatureClick={openFeature}
+              rightText="灵感"
+            />
             {showMoreMenu && (
-              <div className="absolute left-full top-0 ml-1 bg-white border border-gray-100 rounded-xl shadow-xl z-30 py-2 w-40"
-                style={{ animation: 'popIn 0.15s ease forwards' }}>
+              <div
+                className="absolute left-full top-0 ml-1 bg-white border border-gray-100 rounded-xl shadow-xl z-30 py-2 w-40"
+                style={{ animation: "popIn 0.15s ease forwards" }}
+              >
                 {[
-                  { icon: '📁', label: '我的文件' },
-                  { icon: '📄', label: '腾讯文档' },
-                  { icon: '🐼', label: 'ima知识库' },
-                  { icon: '🎯', label: '乐享知识库' },
-                  { icon: '💡', label: '灵感' },
+                  { icon: "📁", label: "我的文件" },
+                  { icon: "📄", label: "腾讯文档" },
+                  { icon: "🐼", label: "ima知识库" },
+                  { icon: "🎯", label: "乐享知识库" },
+                  { icon: "💡", label: "灵感" },
                 ].map(item => (
-                  <button key={item.label}
-                    onClick={() => { setShowMoreMenu(false); openFeature('more'); }}
-                    className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    <span>{item.icon}</span>{item.label}
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      openFeature("more");
+                    }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <span>{item.icon}</span>
+                    {item.label}
                   </button>
                 ))}
               </div>
@@ -181,47 +348,122 @@ export default function Home() {
           </div>
         </nav>
 
+        <div className="mt-4 px-2" aria-label="ABCD 课程实操">
+          <div className="px-3 py-1.5 flex items-center justify-between text-xs text-gray-500">
+            <span>课程实操</span>
+            <span>{completedPractices}/4 完成</span>
+          </div>
+          {practices.map(item => (
+            <button
+              key={item.unit}
+              onClick={() => launchPractice(item.unit)}
+              className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-left ${mainView === "practice" && practiceUnit === item.unit ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:bg-gray-200/60"}`}
+            >
+              <span className="font-semibold text-[#009d71]">{item.unit}</span>
+              <span className="flex-1">{item.title}</span>
+              <span className="text-gray-400">
+                {practiceProgress[item.unit] === 4
+                  ? "✓"
+                  : `${practiceProgress[item.unit]}/4`}
+              </span>
+            </button>
+          ))}
+          <button
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:bg-gray-200/60 rounded-lg"
+            onClick={() => setShowGuide(true)}
+          >
+            <BookOpen size={14} />
+            功能指南 · 27 章节
+          </button>
+        </div>
+
+        <div className="px-2 mt-2">
+          <NavItem
+            icon={<BookOpen size={14} />}
+            label="阅读素材"
+            active={mainView === "reading"}
+            onClick={openReading}
+            featureId="reading"
+            onFeatureClick={openFeature}
+          />
+        </div>
+
         {/* 任务列表 */}
         <div className="mt-3 px-2">
-          <button className="wb-interactive flex items-center gap-1 px-2 py-1 w-full text-left"
-            onClick={() => { setTaskExpanded(!taskExpanded); openFeature('taskList'); }}>
+          <button
+            className="wb-interactive flex items-center gap-1 px-2 py-1 w-full text-left"
+            onClick={() => {
+              setTaskExpanded(!taskExpanded);
+              openFeature("taskList");
+            }}
+          >
             <span className="text-xs font-medium text-gray-500">任务 (16)</span>
-            {taskExpanded ? <ChevronDown size={11} className="text-gray-400" /> : <ChevronRight size={11} className="text-gray-400" />}
+            {taskExpanded ? (
+              <ChevronDown size={11} className="text-gray-400" />
+            ) : (
+              <ChevronRight size={11} className="text-gray-400" />
+            )}
           </button>
           {taskExpanded && (
             <div className="mt-0.5 space-y-0.5">
               {taskList.map((task, i) => (
-                <button key={i} onClick={() => { setShowChat(true); }}
-                  onClickCapture={() => track('chat_complete')}
-                  className="wb-interactive flex items-center justify-between w-full px-2 py-1.5 rounded-lg hover:bg-gray-200/60">
-                  <span className="text-xs text-gray-700 truncate flex-1 text-left">{task.name}</span>
-                  <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{task.time}</span>
+                <button
+                  key={i}
+                  onClick={() => {
+                    setShowChat(true);
+                  }}
+                  onClickCapture={() => track("chat_complete")}
+                  className="wb-interactive flex items-center justify-between w-full px-2 py-1.5 rounded-lg hover:bg-gray-200/60"
+                >
+                  <span className="text-xs text-gray-700 truncate flex-1 text-left">
+                    {task.name}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                    {task.time}
+                  </span>
                 </button>
               ))}
-              <button className="text-xs text-gray-400 px-2 py-1 hover:text-gray-600">查看更多 (11)</button>
+              <button className="text-xs text-gray-400 px-2 py-1 hover:text-gray-600">
+                查看更多 (11)
+              </button>
             </div>
           )}
         </div>
 
         {/* 空间列表 */}
         <div className="mt-2 px-2">
-          <button className="wb-interactive flex items-center gap-1 px-2 py-1 w-full text-left"
-            onClick={() => { setSpaceExpanded(!spaceExpanded); openFeature('spaceList'); }}>
+          <button
+            className="wb-interactive flex items-center gap-1 px-2 py-1 w-full text-left"
+            onClick={() => {
+              setSpaceExpanded(!spaceExpanded);
+              openFeature("spaceList");
+            }}
+          >
             <span className="text-xs font-medium text-gray-500">空间 (1)</span>
-            {spaceExpanded ? <ChevronDown size={11} className="text-gray-400" /> : <ChevronRight size={11} className="text-gray-400" />}
+            {spaceExpanded ? (
+              <ChevronDown size={11} className="text-gray-400" />
+            ) : (
+              <ChevronRight size={11} className="text-gray-400" />
+            )}
           </button>
           {spaceExpanded && (
             <div className="mt-0.5 space-y-0.5">
-              <div onClick={() => openFeature('spaceList')}
-                className="wb-interactive flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-200/60">
+              <div
+                onClick={() => openFeature("spaceList")}
+                className="wb-interactive flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-200/60"
+              >
                 <div className="w-4 h-4 rounded-full bg-[#00C48C]/20 flex items-center justify-center flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-[#00C48C]" />
                 </div>
-                <span className="text-xs text-gray-700 flex-1">项目新手指引</span>
+                <span className="text-xs text-gray-700 flex-1">
+                  项目新手指引
+                </span>
                 <ChevronDown size={11} className="text-gray-400" />
               </div>
-              <div onClick={() => openFeature('spaceList')}
-                className="wb-interactive flex items-center justify-between px-6 py-1 cursor-pointer hover:bg-gray-200/60 rounded-lg">
+              <div
+                onClick={() => openFeature("spaceList")}
+                className="wb-interactive flex items-center justify-between px-6 py-1 cursor-pointer hover:bg-gray-200/60 rounded-lg"
+              >
                 <span className="text-xs text-gray-600">生成项目功能介绍</span>
                 <span className="text-xs text-gray-400">20天前</span>
               </div>
@@ -230,46 +472,121 @@ export default function Home() {
         </div>
 
         {/* 底部用户区 */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200/60 bg-[#F5F5F5]">
+        <div className="mt-auto sticky bottom-0 border-t border-gray-200/60 bg-[#F5F5F5]">
           <div className="relative" ref={userMenuRef}>
-            <button onClick={() => setShowUserMenu(!showUserMenu)}
-              className="wb-interactive flex items-center gap-2 w-full px-3 py-3">
-              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-[#00C48C] flex items-center justify-center text-white text-xs font-bold">A</div>
-              <span className="text-sm font-medium text-gray-700 flex-1 text-left">Avec moi</span>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="wb-interactive flex items-center gap-2 w-full px-3 py-3"
+            >
+              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-[#00C48C] flex items-center justify-center text-white text-xs font-bold">
+                A
+              </div>
+              <span className="text-sm font-medium text-gray-700 flex-1 text-left">
+                Avec moi
+              </span>
               <Bell size={13} className="text-gray-400" />
-              <Settings size={13} className="text-gray-400" onClick={(e) => { e.stopPropagation(); setShowUserMenu(false); setShowSettings(true); track('settings_tab'); }} />
+              <Settings
+                size={13}
+                className="text-gray-400"
+                onClick={e => {
+                  e.stopPropagation();
+                  setShowUserMenu(false);
+                  setShowSettings(true);
+                  track("settings_tab");
+                }}
+              />
             </button>
 
             {showUserMenu && (
-              <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-xl shadow-xl z-30 overflow-hidden"
-                style={{ animation: 'popIn 0.15s ease forwards' }}>
+              <div
+                className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-xl shadow-xl z-30 overflow-hidden"
+                style={{ animation: "popIn 0.15s ease forwards" }}
+              >
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-800">Avec moi</span>
-                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">体验版</span>
+                  <span className="text-sm font-medium text-gray-800">
+                    Avec moi
+                  </span>
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                    体验版
+                  </span>
                 </div>
                 {/* Buddy 加油站 */}
-                <div className="mx-3 my-2 rounded-xl bg-[#00C48C]/10 border border-[#00C48C]/20 p-3 cursor-pointer"
-                  onClick={() => { setShowUserMenu(false); openFeature('growthPlan'); }}>
+                <div
+                  className="mx-3 my-2 rounded-xl bg-[#00C48C]/10 border border-[#00C48C]/20 p-3 cursor-pointer"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    openFeature("growthPlan");
+                  }}
+                >
                   <div className="flex items-center gap-2 mb-1">
                     <span>🎁</span>
-                    <span className="text-xs font-semibold text-gray-800">Buddy 加油站</span>
-                    <span className="text-xs bg-[#00C48C] text-white px-1.5 rounded">3期</span>
+                    <span className="text-xs font-semibold text-gray-800">
+                      Buddy 加油站
+                    </span>
+                    <span className="text-xs bg-[#00C48C] text-white px-1.5 rounded">
+                      3期
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-500">每日可领 <strong>100</strong> 通用积分 · 已领 1 天</p>
-                  <button className="mt-2 w-full py-1.5 bg-gray-700 text-white text-xs rounded-lg">领取中...</button>
+                  <p className="text-xs text-gray-500">
+                    每日可领 <strong>100</strong> 通用积分 · 已领 1 天
+                  </p>
+                  <button className="mt-2 w-full py-1.5 bg-gray-700 text-white text-xs rounded-lg">
+                    领取中...
+                  </button>
                 </div>
                 <div className="py-1">
                   {[
-                    { icon: '💎', label: '积分余额', right: '3,529.95 ›', fn: () => openFeature('growthPlan') },
-                    { icon: '📈', label: '成长计划', right: '领取Buddy赚积分 ›', fn: () => openFeature('growthPlan') },
-                    { icon: '⚙️', label: '设置', right: '', fn: () => { setShowUserMenu(false); setShowSettings(true); } },
-                    { icon: '🎨', label: '外观', right: '', fn: () => openFeature('settings') },
-                    { icon: '❓', label: '帮助与反馈', right: '', fn: () => {} },
+                    {
+                      icon: "💎",
+                      label: "积分余额",
+                      right: "3,529.95 ›",
+                      fn: () => openFeature("growthPlan"),
+                    },
+                    {
+                      icon: "📈",
+                      label: "成长计划",
+                      right: "领取Buddy赚积分 ›",
+                      fn: () => openFeature("growthPlan"),
+                    },
+                    {
+                      icon: "⚙️",
+                      label: "设置",
+                      right: "",
+                      fn: () => {
+                        setShowUserMenu(false);
+                        setShowSettings(true);
+                      },
+                    },
+                    {
+                      icon: "🎨",
+                      label: "外观",
+                      right: "",
+                      fn: () => openFeature("settings"),
+                    },
+                    {
+                      icon: "❓",
+                      label: "帮助与反馈",
+                      right: "",
+                      fn: () => {},
+                    },
                   ].map(item => (
-                    <button key={item.label} onClick={() => { setShowUserMenu(false); item.fn(); }}
-                      className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <div className="flex items-center gap-2.5"><span>{item.icon}</span>{item.label}</div>
-                      {item.right && <span className="text-xs text-gray-400">{item.right}</span>}
+                    <button
+                      key={item.label}
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        item.fn();
+                      }}
+                      className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span>{item.icon}</span>
+                        {item.label}
+                      </div>
+                      {item.right && (
+                        <span className="text-xs text-gray-400">
+                          {item.right}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -280,12 +597,71 @@ export default function Home() {
       </div>
 
       {/* ===== 主内容区 ===== */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* 顶部栏 */}
         <div className="flex items-center justify-between px-6 py-2.5 border-b border-gray-100 flex-shrink-0">
-          <div />
-          <button onClick={() => openFeature('growthPlan')}
-            className="wb-interactive flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 hover:bg-gray-100">
+          <div className="flex min-w-0 items-center gap-3 text-xs text-gray-500">
+            {mainView === "practice" ? (
+              <>
+                <span>
+                  课程实操 /{" "}
+                  <strong className="text-gray-800">
+                    {practiceUnit}{" "}
+                    {practices.find(p => p.unit === practiceUnit)?.title}
+                  </strong>
+                </span>
+                <button
+                  className="hover:text-[#009d71]"
+                  onClick={() =>
+                    openFeature(
+                      practiceUnit === "D"
+                        ? "project"
+                        : practiceUnit === "C"
+                          ? "more"
+                          : practiceUnit === "A"
+                            ? "skills"
+                            : "expert"
+                    )
+                  }
+                >
+                  功能说明
+                </button>
+                {(practiceUnit === "A" ||
+                  practiceUnit === "B" ||
+                  practiceUnit === "D") && (
+                  <button
+                    className="hover:text-[#009d71]"
+                    onClick={() =>
+                      setMainView(practiceUnit === "D" ? "project" : "expert")
+                    }
+                  >
+                    功能概览
+                  </button>
+                )}
+                <span className="hidden lg:inline text-gray-400">
+                  教学模拟 · 不消耗积分
+                </span>
+              </>
+            ) : (
+              <>
+                <span>WorkBuddy 功能演示</span>
+                {(mainView === "expert" || mainView === "project") && (
+                  <button
+                    className="text-[#009d71]"
+                    onClick={() =>
+                      launchPractice(mainView === "project" ? "D" : "B")
+                    }
+                  >
+                    进入课程实操 →
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          <button
+            onClick={() => openFeature("growthPlan")}
+            className="wb-interactive flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 hover:bg-gray-100"
+          >
             <div className="w-5 h-5 rounded-full bg-[#00C48C] flex items-center justify-center">
               <Sparkles size={10} className="text-white" />
             </div>
@@ -294,13 +670,43 @@ export default function Home() {
           </button>
         </div>
 
+        {practiceLaunch && (
+          <div
+            className={
+              mainView === "practice"
+                ? "flex-1 min-h-0 overflow-hidden"
+                : "hidden"
+            }
+          >
+            <Replica
+              embedded
+              active={mainView === "practice"}
+              launch={practiceLaunch}
+              onUnitChange={handlePracticeUnit}
+              onProgress={setPracticeProgress}
+              onCourse={() => setShowGuide(true)}
+            />
+          </div>
+        )}
         {/* 视图切换 */}
-        {mainView === 'expert' ? (
-          <ExpertPanel onFeatureClick={(f) => { setActiveFeature(f); track('expert_click'); }} />
-        ) : mainView === 'project' ? (
+        {mainView === "practice" ? null : mainView === "reading" ? (
+          <ReadingPanel />
+        ) : mainView === "expert" ? (
+          <ExpertPanel
+            onFeatureClick={f => {
+              setActiveFeature(f);
+              track("expert_click");
+            }}
+          />
+        ) : mainView === "project" ? (
           <ProjectPanel onFeatureClick={setActiveFeature} />
-        ) : mainView === 'automation' ? (
-          <AutomationPanel onFeatureClick={(f) => { setActiveFeature(f); track('automation_click'); }} />
+        ) : mainView === "automation" ? (
+          <AutomationPanel
+            onFeatureClick={f => {
+              setActiveFeature(f);
+              track("automation_click");
+            }}
+          />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden relative">
             {/* 欢迎横幅 */}
@@ -309,31 +715,85 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <span className="text-base">👋</span>
                   <p className="text-sm text-gray-700">
-                    <strong>欢迎体验 WorkBuddy 演示！</strong> 悬停任意功能区域查看介绍，点击下方按钮体验真实交互模拟。
+                    <strong>欢迎体验 WorkBuddy 演示！</strong>{" "}
+                    悬停任意功能区域查看介绍，点击下方按钮体验真实交互模拟。
                   </p>
                 </div>
-                <button onClick={() => setShowWelcome(false)} className="text-gray-400 hover:text-gray-600 ml-3 flex-shrink-0 text-sm">✕</button>
+                <button
+                  onClick={() => setShowWelcome(false)}
+                  className="text-gray-400 hover:text-gray-600 ml-3 flex-shrink-0 text-sm"
+                >
+                  ✕
+                </button>
               </div>
             )}
 
             <div className="flex-1 flex flex-col items-center justify-center px-8 pb-4 overflow-y-auto">
               {/* 标题 */}
               <div className="text-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-1">WorkBuddy</h1>
-                <h2 className="text-3xl font-bold text-gray-900">你的职场超能力</h2>
+                <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                  WorkBuddy
+                </h1>
+                <h2 className="text-3xl font-bold text-gray-900">
+                  你的职场超能力
+                </h2>
 
                 {/* 场景切换 */}
-                <div className="wb-interactive flex items-center gap-1 mt-5 bg-gray-100 rounded-full p-1 inline-flex"
-                  onClick={() => openFeature('sceneTabs')}>
+                <div
+                  className="wb-interactive flex items-center gap-1 mt-5 bg-gray-100 rounded-full p-1 inline-flex"
+                  onClick={() => openFeature("sceneTabs")}
+                >
                   {[
-                    { id: 'daily', label: '日常办公', icon: '☕' },
-                    { id: 'code', label: '代码开发', icon: '💻' },
-                    { id: 'design', label: '设计创意', icon: '🎨' },
+                    { id: "daily", label: "日常办公", icon: "☕" },
+                    { id: "code", label: "代码开发", icon: "💻" },
+                    { id: "design", label: "设计创意", icon: "🎨" },
                   ].map(scene => (
-                    <button key={scene.id}
-                      onClick={(e) => { e.stopPropagation(); setActiveScene(scene.id); openFeature('sceneTabs'); }}
-                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeScene === scene.id ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                      <span>{scene.icon}</span>{scene.label}
+                    <button
+                      key={scene.id}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setActiveScene(scene.id);
+                        openFeature("sceneTabs");
+                      }}
+                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeScene === scene.id ? "bg-gray-900 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                    >
+                      <span>{scene.icon}</span>
+                      {scene.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                className="w-full max-w-3xl mb-5 rounded-xl border border-gray-200 bg-white"
+                aria-label="实操课程入口"
+              >
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
+                  <span className="text-xs font-medium text-gray-700">
+                    跟着截图动手练习
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    4 个单元 · 已完成 {completedPractices} 个
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 xl:grid-cols-4 divide-x divide-gray-100">
+                  {practices.map(item => (
+                    <button
+                      key={item.unit}
+                      onClick={() => launchPractice(item.unit)}
+                      className="px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="flex items-center gap-2 text-sm text-gray-800">
+                        <b className="text-[#009d71]">{item.unit}</b>
+                        {item.title}
+                        <ChevronRight
+                          size={12}
+                          className="ml-auto text-gray-400"
+                        />
+                      </span>
+                      <span className="block mt-1.5 text-[11px] leading-relaxed text-gray-500">
+                        {item.detail}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -342,22 +802,27 @@ export default function Home() {
               {/* 快捷模板 */}
               <div className="flex items-center gap-2 mb-4 flex-wrap justify-center">
                 {[
-                  { icon: '📄', label: '文档处理' },
-                  { icon: '💰', label: '金融服务' },
-                  { icon: '🎓', label: '高考我帮你' },
-                  { icon: '···', label: '更多' },
+                  { icon: "📄", label: "文档处理" },
+                  { icon: "💰", label: "金融服务" },
+                  { icon: "🎓", label: "高考我帮你" },
+                  { icon: "···", label: "更多" },
                 ].map(t => (
-                  <button key={t.label}
-                    onClick={() => openFeature('quickTemplates')}
-                    className="wb-interactive flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:border-[#00C48C]/40 hover:bg-[#00C48C]/5 transition-all">
-                    <span className="text-xs">{t.icon}</span>{t.label}
+                  <button
+                    key={t.label}
+                    onClick={() => openFeature("quickTemplates")}
+                    className="wb-interactive flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:border-[#00C48C]/40 hover:bg-[#00C48C]/5 transition-all"
+                  >
+                    <span className="text-xs">{t.icon}</span>
+                    {t.label}
                   </button>
                 ))}
               </div>
 
               {/* 对话输入框 */}
-              <div className="wb-interactive w-full max-w-2xl border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                onClick={() => openFeature('inputBox')}>
+              <div
+                className="wb-interactive w-full max-w-2xl border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                onClick={() => openFeature("inputBox")}
+              >
                 <div className="px-4 pt-3 pb-2">
                   <textarea
                     className="w-full text-sm text-gray-700 placeholder-gray-400 resize-none outline-none bg-transparent leading-relaxed"
@@ -366,7 +831,12 @@ export default function Home() {
                     value={inputText}
                     onChange={e => setInputText(e.target.value)}
                     onClick={e => e.stopPropagation()}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
                   />
                 </div>
 
@@ -375,28 +845,74 @@ export default function Home() {
                   <div className="flex items-center gap-0.5">
                     {/* Craft 模式 */}
                     <div className="relative" ref={craftMenuRef}>
-                      <button onClick={(e) => { e.stopPropagation(); setShowCraftMenu(!showCraftMenu); }}
-                        className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setShowCraftMenu(!showCraftMenu);
+                        }}
+                        className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100"
+                      >
                         <Sparkles size={11} className="text-[#00C48C]" />
                         <span>Craft</span>
                         <ChevronDown size={10} />
                       </button>
                       {showCraftMenu && (
-                        <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-100 rounded-xl shadow-xl z-30 py-1.5 w-40"
-                          style={{ animation: 'popIn 0.15s ease forwards' }}>
+                        <div
+                          className="absolute bottom-full left-0 mb-1 bg-white border border-gray-100 rounded-xl shadow-xl z-30 py-1.5 w-40"
+                          style={{ animation: "popIn 0.15s ease forwards" }}
+                        >
                           {[
-                            { id: 'craftMode', label: 'Craft', icon: '⚙️', checked: true },
-                            { id: 'askMode', label: 'Ask', icon: '💬', checked: false },
-                            { id: 'planMode', label: 'Plan', icon: '📋', checked: false },
-                            { id: 'expert', label: '召唤专家', icon: '👥', checked: false, arrow: true },
+                            {
+                              id: "craftMode",
+                              label: "Craft",
+                              icon: "⚙️",
+                              checked: true,
+                            },
+                            {
+                              id: "askMode",
+                              label: "Ask",
+                              icon: "💬",
+                              checked: false,
+                            },
+                            {
+                              id: "planMode",
+                              label: "Plan",
+                              icon: "📋",
+                              checked: false,
+                            },
+                            {
+                              id: "expert",
+                              label: "召唤专家",
+                              icon: "👥",
+                              checked: false,
+                              arrow: true,
+                            },
                           ].map(item => (
-                            <button key={item.id}
-                              onClick={(e) => { e.stopPropagation(); setShowCraftMenu(false); openFeature(item.id); }}
-                              className="flex items-center justify-between w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                              <div className="flex items-center gap-2"><span className="text-xs">{item.icon}</span><span>{item.label}</span></div>
+                            <button
+                              key={item.id}
+                              onClick={e => {
+                                e.stopPropagation();
+                                setShowCraftMenu(false);
+                                openFeature(item.id);
+                              }}
+                              className="flex items-center justify-between w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs">{item.icon}</span>
+                                <span>{item.label}</span>
+                              </div>
                               <div className="flex items-center gap-1">
-                                {item.checked && <span className="text-[#00C48C] text-xs">✓</span>}
-                                {item.arrow && <ChevronRight size={11} className="text-gray-400" />}
+                                {item.checked && (
+                                  <span className="text-[#00C48C] text-xs">
+                                    ✓
+                                  </span>
+                                )}
+                                {item.arrow && (
+                                  <ChevronRight
+                                    size={11}
+                                    className="text-gray-400"
+                                  />
+                                )}
                               </div>
                             </button>
                           ))}
@@ -404,35 +920,91 @@ export default function Home() {
                       )}
                     </div>
 
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('automation'); }}
-                      className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100">
-                      <Zap size={11} /><span>自动</span><ChevronDown size={10} />
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("automation");
+                      }}
+                      className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100"
+                    >
+                      <Zap size={11} />
+                      <span>自动</span>
+                      <ChevronDown size={10} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('skills'); }}
-                      className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100">
-                      <Layers size={11} /><span>技能</span><ChevronDown size={10} />
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("skills");
+                      }}
+                      className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100"
+                    >
+                      <Layers size={11} />
+                      <span>技能</span>
+                      <ChevronDown size={10} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('github'); }}
-                      className="wb-interactive p-1.5 rounded-lg text-gray-500 hover:bg-gray-100">
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("github");
+                      }}
+                      className="wb-interactive p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                    >
                       <Github size={13} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('permission'); }}
-                      className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100">
-                      <Shield size={11} /><span>默认权限</span><ChevronDown size={10} />
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("permission");
+                      }}
+                      className="wb-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100"
+                    >
+                      <Shield size={11} />
+                      <span>默认权限</span>
+                      <ChevronDown size={10} />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('inputBox'); }}
-                      className="wb-interactive p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><Plus size={15} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('inputBox'); }}
-                      className="wb-interactive p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><Sparkles size={15} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); openFeature('inputBox'); }}
-                      className="wb-interactive p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><Mic size={15} /></button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleSend(); }}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${inputText.trim() ? 'bg-[#00C48C]' : 'bg-gray-200'}`}>
-                      <Send size={13} className={inputText.trim() ? 'text-white' : 'text-gray-400'} />
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("inputBox");
+                      }}
+                      className="wb-interactive p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+                    >
+                      <Plus size={15} />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("inputBox");
+                      }}
+                      className="wb-interactive p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+                    >
+                      <Sparkles size={15} />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        openFeature("inputBox");
+                      }}
+                      className="wb-interactive p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+                    >
+                      <Mic size={15} />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleSend();
+                      }}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${inputText.trim() ? "bg-[#00C48C]" : "bg-gray-200"}`}
+                    >
+                      <Send
+                        size={13}
+                        className={
+                          inputText.trim() ? "text-white" : "text-gray-400"
+                        }
+                      />
                     </button>
                   </div>
                 </div>
@@ -440,11 +1012,16 @@ export default function Home() {
 
               {/* 工作空间选择 */}
               <div className="w-full max-w-2xl mt-2">
-              <button
+                <button
                   onClick={() => setShowWorkspace(true)}
-                  className="wb-interactive flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-colors">
+                  className="wb-interactive flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-colors"
+                >
                   <Folder size={13} />
-                  <span>{selectedWorkspace ? `工作空间：${selectedWorkspace}` : '选择工作空间'}</span>
+                  <span>
+                    {selectedWorkspace
+                      ? `工作空间：${selectedWorkspace}`
+                      : "选择工作空间"}
+                  </span>
                   <ChevronRight size={13} />
                 </button>
               </div>
@@ -454,18 +1031,24 @@ export default function Home() {
                 {/* 功能指南入口 */}
                 <div className="col-span-3 mb-1">
                   <button
-                  onClick={() => setShowGuide(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-950 text-white rounded-xl hover:bg-gray-800 transition-colors group"
-                >
-
+                    onClick={() => setShowGuide(true)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-950 text-white rounded-xl hover:bg-gray-800 transition-colors group"
+                  >
                     <div className="flex items-center gap-3">
                       <BookOpen size={16} className="text-[#00C48C]" />
                       <div className="text-left">
-                        <p className="text-sm font-semibold">WorkBuddy 功能指南</p>
-                        <p className="text-xs text-gray-400">27章节 · 4条学习路径 · 指令模板 · 进度记录</p>
+                        <p className="text-sm font-semibold">
+                          WorkBuddy 功能指南
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          27章节 · 4条学习路径 · 指令模板 · 进度记录
+                        </p>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-gray-400 group-hover:text-white transition-colors" />
+                    <ChevronRight
+                      size={16}
+                      className="text-gray-400 group-hover:text-white transition-colors"
+                    />
                   </button>
                 </div>
                 <button
@@ -476,8 +1059,12 @@ export default function Home() {
                     <MessageSquare size={18} className="text-[#00C48C]" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-gray-800">体验对话</p>
-                    <p className="text-xs text-gray-500 mt-0.5">模拟真实 AI 对话</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      体验对话
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      模拟真实 AI 对话
+                    </p>
                   </div>
                 </button>
 
@@ -489,7 +1076,9 @@ export default function Home() {
                     <MonitorPlay size={18} className="text-[#6366F1]" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-gray-800">任务执行</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      任务执行
+                    </p>
                     <p className="text-xs text-gray-500 mt-0.5">桌面整理模拟</p>
                   </div>
                 </button>
@@ -502,7 +1091,9 @@ export default function Home() {
                     <Folder size={18} className="text-[#F59E0B]" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-gray-800">工作空间</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      工作空间
+                    </p>
                     <p className="text-xs text-gray-500 mt-0.5">选择文件目录</p>
                   </div>
                 </button>
@@ -513,46 +1104,74 @@ export default function Home() {
       </div>
 
       {/* ===== 侧边抽屉（功能介绍，不遮挡主界面）===== */}
-      <FeatureDrawer feature={activeFeature} onClose={() => setActiveFeature(null)} />
+      <FeatureDrawer
+        feature={activeFeature}
+        onClose={() => setActiveFeature(null)}
+      />
 
       {/* ===== 全屏弹窗（设置、对话、任务、工作空间）===== */}
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onFeatureClick={(f) => { setShowSettings(false); setActiveFeature(f); }}
+          onFeatureClick={f => {
+            setShowSettings(false);
+            setActiveFeature(f);
+          }}
         />
       )}
-      {showChat && <ChatSimulator onClose={() => setShowChat(false)} onPresetUsed={() => track('preset_chat')} />}
-      {showDesktopTask && <DesktopTaskSimulator onClose={() => { setShowDesktopTask(false); track('task_complete'); }} />}
+      {showChat && (
+        <ChatSimulator
+          onClose={() => setShowChat(false)}
+          onPresetUsed={() => track("preset_chat")}
+        />
+      )}
+      {showDesktopTask && (
+        <DesktopTaskSimulator
+          onClose={() => {
+            setShowDesktopTask(false);
+            track("task_complete");
+          }}
+        />
+      )}
       {showWorkspace && (
         <WorkspaceModal
           onClose={() => setShowWorkspace(false)}
-          onSelect={(name) => { setSelectedWorkspace(name); track('workspace_select'); }}
+          onSelect={name => {
+            setSelectedWorkspace(name);
+            track("workspace_select");
+          }}
         />
       )}
       {showGuide && (
         <GuidePage
-          onClose={() => { setShowGuide(false); track('guide_chapter'); }}
+          onClose={() => {
+            setShowGuide(false);
+            track("guide_chapter");
+          }}
           onLaunch={handleGuideLaunch}
+          onPractice={launchPractice}
+          onReading={openReading}
         />
       )}
 
       {/* 进度条 */}
-      <ProgressBar
-        completedCategories={completedCategories}
-        isAllComplete={isAllComplete}
-        progress={progress}
-        onEggClick={() => {
-          if (isAllComplete) {
-            import('@/components/EasterEgg').then(() => {});
-            dismissEgg();
-            setTimeout(() => {
-              localStorage.removeItem('wb_egg_seen');
-              window.dispatchEvent(new CustomEvent('show_egg'));
-            }, 10);
-          }
-        }}
-      />
+      {mainView !== "practice" && mainView !== "reading" && (
+        <ProgressBar
+          completedCategories={completedCategories}
+          isAllComplete={isAllComplete}
+          progress={progress}
+          onEggClick={() => {
+            if (isAllComplete) {
+              import("@/components/EasterEgg").then(() => {});
+              dismissEgg();
+              setTimeout(() => {
+                localStorage.removeItem("wb_egg_seen");
+                window.dispatchEvent(new CustomEvent("show_egg"));
+              }, 10);
+            }
+          }}
+        />
+      )}
 
       {/* 彩蛋弹窗 */}
       {eggTriggered && <EasterEgg onClose={dismissEgg} />}
@@ -568,7 +1187,13 @@ export default function Home() {
 }
 
 function NavItem({
-  icon, label, active, onClick, featureId, onFeatureClick, rightText
+  icon,
+  label,
+  active,
+  onClick,
+  featureId,
+  onFeatureClick,
+  rightText,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -582,10 +1207,14 @@ function NavItem({
     <button
       onClick={onClick}
       className={`wb-interactive flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition-all ${
-        active ? 'bg-white shadow-sm text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-200/60'
+        active
+          ? "bg-white shadow-sm text-gray-900 font-medium"
+          : "text-gray-600 hover:bg-gray-200/60"
       }`}
     >
-      <span className={active ? 'text-[#00C48C]' : 'text-gray-500'}>{icon}</span>
+      <span className={active ? "text-[#00C48C]" : "text-gray-500"}>
+        {icon}
+      </span>
       <span className="flex-1 text-left">{label}</span>
       {rightText && <span className="text-xs text-gray-400">{rightText}</span>}
     </button>
